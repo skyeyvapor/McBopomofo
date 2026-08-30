@@ -98,6 +98,28 @@ bool ReadingGrid::deleteReadingAfterCursor() {
   return true;
 }
 
+bool ReadingGrid::refresh() {
+  std::vector<Span> refreshedSpans(readings_.size());
+  for (size_t pos = 0; pos < readings_.size(); ++pos) {
+    size_t maximumLength = std::min(kMaximumSpanLength, readings_.size() - pos);
+    for (size_t len = 1; len <= maximumLength; ++len) {
+      std::string combinedReading =
+          combineReading(readings_.begin() + static_cast<ptrdiff_t>(pos),
+                         readings_.begin() + static_cast<ptrdiff_t>(pos + len));
+      auto unigrams = lm_.getUnigrams(combinedReading);
+      if (!unigrams.empty()) {
+        refreshedSpans[pos].add(std::make_shared<Node>(
+            std::move(combinedReading), len, std::move(unigrams)));
+      }
+    }
+    if (refreshedSpans[pos].nodeOf(1) == nullptr) {
+      return false;
+    }
+  }
+  spans_ = std::move(refreshedSpans);
+  return true;
+}
+
 std::optional<ReadingGrid::NodePtr> ReadingGrid::findInSpan(
     size_t cursor, const std::function<bool(const NodePtr&)>& predicate) const {
   assert(cursor <= readings_.size());

@@ -154,6 +154,12 @@ class SimpleLM : public LanguageModel {
     return db_.find(key) != db_.end();
   }
 
+  void setUnigrams(const std::string& key, std::vector<Unigram> unigrams) {
+    db_[key] = std::move(unigrams);
+  }
+
+  void removeUnigrams(const std::string& key) { db_.erase(key); }
+
  protected:
   std::map<std::string, std::vector<Unigram>> db_;
 };
@@ -376,6 +382,28 @@ TEST(ReadingGridTest, DeletionOnlyQueriesSpansCrossingTheEdit) {
   ASSERT_EQ(grid.readings(), (std::vector<std::string>{"c"}));
   ASSERT_NE(grid.spans()[0].nodeOf(1), nullptr);
   EXPECT_EQ(grid.spans()[0].nodeOf(1)->reading(), "c");
+}
+
+TEST(ReadingGridTest, RefreshAfterLanguageModelChange) {
+  auto lm = std::make_shared<SimpleLM>(kSampleData);
+  ReadingGrid grid(lm);
+  grid.setReadingSeparator("");
+  ASSERT_TRUE(grid.insertReading("ㄍㄠ"));
+  ASSERT_TRUE(grid.insertReading("ㄎㄜ"));
+  ASSERT_EQ(grid.cursor(), 2);
+  EXPECT_FALSE(Contains(grid.candidatesAt(1), "高科"));
+
+  lm->setUnigrams("ㄍㄠㄎㄜ", {LanguageModel::Unigram("高科", 0)});
+  EXPECT_FALSE(Contains(grid.candidatesAt(1), "高科"));
+  ASSERT_TRUE(grid.refresh());
+  EXPECT_TRUE(Contains(grid.candidatesAt(1), "高科"));
+  EXPECT_EQ(grid.cursor(), 2);
+
+  lm->removeUnigrams("ㄍㄠㄎㄜ");
+  EXPECT_TRUE(Contains(grid.candidatesAt(1), "高科"));
+  ASSERT_TRUE(grid.refresh());
+  EXPECT_FALSE(Contains(grid.candidatesAt(1), "高科"));
+  EXPECT_EQ(grid.cursor(), 2);
 }
 
 TEST(ReadingGridTest, InsertReadingAcceptsReadingOwnedByGrid) {

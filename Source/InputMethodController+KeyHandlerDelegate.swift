@@ -92,9 +92,11 @@ extension McBopomofoInputMethodController: KeyHandlerDelegate {
         if !state.validToWrite {
             return false
         }
-        LanguageModelManager.writeUserPhrase(state.userPhrase)
-        runUserPhraseHookIfEnabled(text: state.selectedText)
-        return true
+        let result = LanguageModelManager.writeUserPhrase(state.userPhrase)
+        if result {
+            runUserPhraseHookIfEnabled(text: state.selectedText)
+        }
+        return result
     }
 
     func keyHandler(

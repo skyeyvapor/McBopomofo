@@ -75,6 +75,10 @@ class ReadingGrid {
   // Delete the reading after the cursor, like Del. Cursor is unmoved.
   bool deleteReadingAfterCursor();
 
+  // Rebuild all nodes using the current language model while preserving the
+  // readings and cursor.
+  bool refresh();
+
   static constexpr size_t kMaximumSpanLength = 8;
   static constexpr char kDefaultSeparator[] = "-";
 
