@@ -388,14 +388,8 @@ class InputState: NSObject {
                 return false
             }
 
-            let (exactBegin, _) = (composingBuffer as NSString).characterIndex(
-                from: markedRange.location)
-            let (exactEnd, _) = (composingBuffer as NSString).characterIndex(
-                from: markedRange.location + markedRange.length)
-            let selectedReadings = readings[exactBegin..<exactEnd]
-
-            let joined = selectedReadings.joined(separator: "-")
-            let exist = LanguageModelManager.checkIfExist(userPhrase: text, key: joined)
+            let exist = LanguageModelManager.checkIfExist(
+                userPhrase: text, key: selectedReading)
             if exist {
                 tooltip = String(
                     format: NSLocalizedString(
@@ -475,15 +469,17 @@ class InputState: NSObject {
             (composingBuffer as NSString).substring(with: markedRange)
         }
 
-        @objc var userPhrase: String {
-            let text = (composingBuffer as NSString).substring(with: markedRange)
+        @objc var selectedReading: String {
             let (exactBegin, _) = (composingBuffer as NSString).characterIndex(
                 from: markedRange.location)
             let (exactEnd, _) = (composingBuffer as NSString).characterIndex(
                 from: markedRange.location + markedRange.length)
             let selectedReadings = readings[exactBegin..<exactEnd]
-            let joined = selectedReadings.joined(separator: "-")
-            return "\(text) \(joined)"
+            return selectedReadings.joined(separator: "-")
+        }
+
+        @objc var userPhrase: String {
+            "\(selectedText) \(selectedReading)"
         }
     }
 

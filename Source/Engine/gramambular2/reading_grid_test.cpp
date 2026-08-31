@@ -384,26 +384,226 @@ TEST(ReadingGridTest, DeletionOnlyQueriesSpansCrossingTheEdit) {
   EXPECT_EQ(grid.spans()[0].nodeOf(1)->reading(), "c");
 }
 
-TEST(ReadingGridTest, RefreshAfterLanguageModelChange) {
-  auto lm = std::make_shared<SimpleLM>(kSampleData);
+TEST(ReadingGridTest, RefreshNodesForReadingAddsAndRemovesMatchingNodes) {
+  constexpr char kData[] = R"(
+ㄍㄠ 高 -1
+ㄎㄜ 科 -1
+)";
+  auto lm = std::make_shared<SimpleLM>(kData);
   ReadingGrid grid(lm);
-  grid.setReadingSeparator("");
   ASSERT_TRUE(grid.insertReading("ㄍㄠ"));
   ASSERT_TRUE(grid.insertReading("ㄎㄜ"));
-  ASSERT_EQ(grid.cursor(), 2);
-  EXPECT_FALSE(Contains(grid.candidatesAt(1), "高科"));
+  ASSERT_TRUE(grid.insertReading("ㄍㄠ"));
+  ASSERT_TRUE(grid.insertReading("ㄎㄜ"));
+  ASSERT_EQ(grid.cursor(), 4);
+  EXPECT_FALSE(Contains(grid.candidatesAt(0), "高科"));
+  EXPECT_FALSE(Contains(grid.candidatesAt(2), "高科"));
+  auto displayedWalk = grid.walk();
 
-  lm->setUnigrams("ㄍㄠㄎㄜ", {LanguageModel::Unigram("高科", 0)});
-  EXPECT_FALSE(Contains(grid.candidatesAt(1), "高科"));
-  ASSERT_TRUE(grid.refresh());
-  EXPECT_TRUE(Contains(grid.candidatesAt(1), "高科"));
-  EXPECT_EQ(grid.cursor(), 2);
+  lm->setUnigrams("ㄍㄠ-ㄎㄜ", {LanguageModel::Unigram("高科", 0)});
+  ASSERT_TRUE(grid.refreshNodesForReading("ㄍㄠ-ㄎㄜ"));
+  EXPECT_TRUE(Contains(grid.candidatesAt(0), "高科"));
+  EXPECT_TRUE(Contains(grid.candidatesAt(2), "高科"));
+  EXPECT_EQ(displayedWalk.valuesAsStrings(),
+            (std::vector<std::string>{"高", "科", "高", "科"}));
+  EXPECT_EQ(grid.walk().valuesAsStrings(),
+            (std::vector<std::string>{"高科", "高科"}));
+  EXPECT_EQ(grid.cursor(), 4);
 
-  lm->removeUnigrams("ㄍㄠㄎㄜ");
-  EXPECT_TRUE(Contains(grid.candidatesAt(1), "高科"));
-  ASSERT_TRUE(grid.refresh());
-  EXPECT_FALSE(Contains(grid.candidatesAt(1), "高科"));
-  EXPECT_EQ(grid.cursor(), 2);
+  lm->removeUnigrams("ㄍㄠ-ㄎㄜ");
+  ASSERT_TRUE(grid.refreshNodesForReading("ㄍㄠ-ㄎㄜ"));
+  EXPECT_FALSE(Contains(grid.candidatesAt(0), "高科"));
+  EXPECT_FALSE(Contains(grid.candidatesAt(2), "高科"));
+  EXPECT_EQ(grid.cursor(), 4);
+}
+
+TEST(ReadingGridTest, RefreshNodesForReadingDoesNotRemoveSingleReadingNode) {
+  constexpr char kData[] = R"(
+ㄕˋ 是 -1
+)";
+  auto lm = std::make_shared<SimpleLM>(kData);
+  ReadingGrid grid(lm);
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  const auto originalNode = grid.spans()[0].nodeOf(1);
+  ASSERT_NE(originalNode, nullptr);
+
+  lm->removeUnigrams("ㄕˋ");
+  EXPECT_FALSE(grid.refreshNodesForReading("ㄕˋ"));
+  EXPECT_EQ(grid.spans()[0].nodeOf(1), originalNode);
+  EXPECT_EQ(grid.walk().valuesAsStrings(), (std::vector<std::string>{"是"}));
+}
+
+TEST(ReadingGridTest,
+     RefreshRepeatedReadingPreservesExistingWalkWithCandidateOverride) {
+  constexpr char kData[] = R"(
+ㄕˋ 是 -1
+ㄕˋ 事 -2
+ㄐㄧㄡˋ 就 -1
+ㄕˋ-ㄕˋ 試試 -1
+ㄕˋ-ㄕˋ 逝世 -2
+)";
+  auto lm = std::make_shared<SimpleLM>(kData);
+  ReadingGrid grid(lm);
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  ASSERT_TRUE(grid.insertReading("ㄐㄧㄡˋ"));
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  // This is a transient ReadingGrid candidate override, not an observation in
+  // UserOverrideModel.
+  ASSERT_TRUE(grid.overrideCandidate(0, "逝世"));
+  ASSERT_TRUE(grid.overrideCandidate(3, "是"));
+  ASSERT_TRUE(grid.overrideCandidate(4, "事"));
+  const auto originalFirstCharacterNode = grid.spans()[3].nodeOf(1);
+  const auto originalSecondCharacterNode = grid.spans()[4].nodeOf(1);
+  ASSERT_NE(originalFirstCharacterNode, nullptr);
+  ASSERT_NE(originalSecondCharacterNode, nullptr);
+  ASSERT_TRUE(originalFirstCharacterNode->isOverridden());
+  ASSERT_TRUE(originalSecondCharacterNode->isOverridden());
+  EXPECT_EQ(originalFirstCharacterNode->value(), "是");
+  EXPECT_EQ(originalSecondCharacterNode->value(), "事");
+  auto displayedWalk = grid.walk();
+  EXPECT_EQ(displayedWalk.valuesAsStrings(),
+            (std::vector<std::string>{"逝世", "就", "是", "事"}));
+  const auto originalFrontNode = grid.spans()[0].nodeOf(2);
+  const auto originalBackNode = grid.spans()[3].nodeOf(2);
+  ASSERT_NE(originalFrontNode, nullptr);
+  ASSERT_NE(originalBackNode, nullptr);
+
+  // Model 是事 being added after its two characters were selected separately
+  // at the second ㄕˋ-ㄕˋ occurrence. Both matching phrase nodes are refreshed,
+  // while the existing walk keeps its original nodes.
+  lm->setUnigrams("ㄕˋ-ㄕˋ", {LanguageModel::Unigram("是事", 0),
+                              LanguageModel::Unigram("試試", -1),
+                              LanguageModel::Unigram("逝世", -2)});
+  ASSERT_TRUE(grid.refreshNodesForReading("ㄕˋ-ㄕˋ"));
+  const auto addedFrontNode = grid.spans()[0].nodeOf(2);
+  const auto addedBackNode = grid.spans()[3].nodeOf(2);
+  ASSERT_NE(addedFrontNode, nullptr);
+  ASSERT_NE(addedBackNode, nullptr);
+  EXPECT_NE(addedFrontNode, originalFrontNode);
+  EXPECT_NE(addedBackNode, originalBackNode);
+  EXPECT_TRUE(addedFrontNode->isOverridden());
+  EXPECT_EQ(addedFrontNode->value(), "逝世");
+  EXPECT_EQ(grid.spans()[3].nodeOf(1), originalFirstCharacterNode);
+  EXPECT_EQ(grid.spans()[4].nodeOf(1), originalSecondCharacterNode);
+  EXPECT_TRUE(Contains(grid.candidatesAt(0), "是事"));
+  EXPECT_TRUE(Contains(grid.candidatesAt(3), "是事"));
+  EXPECT_EQ(displayedWalk.valuesAsStrings(),
+            (std::vector<std::string>{"逝世", "就", "是", "事"}));
+
+  // Model the language model state after boosting 逝世 and excluding 試試.
+  lm->setUnigrams("ㄕˋ-ㄕˋ", {LanguageModel::Unigram("逝世", 0),
+                              LanguageModel::Unigram("是事", 0)});
+  ASSERT_TRUE(grid.refreshNodesForReading("ㄕˋ-ㄕˋ"));
+  const auto replacedFrontNode = grid.spans()[0].nodeOf(2);
+  const auto replacedBackNode = grid.spans()[3].nodeOf(2);
+  ASSERT_NE(replacedFrontNode, nullptr);
+  ASSERT_NE(replacedBackNode, nullptr);
+  EXPECT_NE(replacedFrontNode, addedFrontNode);
+  EXPECT_NE(replacedBackNode, addedBackNode);
+  EXPECT_TRUE(replacedFrontNode->isOverridden());
+  EXPECT_EQ(replacedFrontNode->value(), "逝世");
+  EXPECT_FALSE(Contains(grid.candidatesAt(3), "試試"));
+  EXPECT_EQ(displayedWalk.valuesAsStrings(),
+            (std::vector<std::string>{"逝世", "就", "是", "事"}));
+  EXPECT_EQ(grid.walk().valuesAsStrings(),
+            (std::vector<std::string>{"逝世", "就", "是", "事"}));
+
+  // Model all phrases for ㄕˋ-ㄕˋ being removed.
+  lm->removeUnigrams("ㄕˋ-ㄕˋ");
+  ASSERT_TRUE(grid.refreshNodesForReading("ㄕˋ-ㄕˋ"));
+  EXPECT_EQ(grid.spans()[0].nodeOf(2), nullptr);
+  EXPECT_EQ(grid.spans()[3].nodeOf(2), nullptr);
+  EXPECT_EQ(displayedWalk.valuesAsStrings(),
+            (std::vector<std::string>{"逝世", "就", "是", "事"}));
+  EXPECT_EQ(grid.walk().valuesAsStrings(),
+            (std::vector<std::string>{"是", "是", "就", "是", "事"}));
+}
+
+TEST(ReadingGridTest,
+     RefreshRepeatedReadingPreservesExistingWalkWithoutCandidateOverride) {
+  constexpr char kData[] = R"(
+ㄕˋ 是 -1
+ㄕˋ 事 -2
+ㄐㄧㄡˋ 就 -1
+ㄕˋ-ㄕˋ 試試 -1
+ㄕˋ-ㄕˋ 逝世 -2
+)";
+  auto lm = std::make_shared<SimpleLM>(kData);
+  ReadingGrid grid(lm);
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  ASSERT_TRUE(grid.insertReading("ㄐㄧㄡˋ"));
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  auto displayedWalk = grid.walk();
+  EXPECT_EQ(displayedWalk.valuesAsStrings(),
+            (std::vector<std::string>{"試試", "就", "試試"}));
+
+  lm->setUnigrams("ㄕˋ-ㄕˋ", {LanguageModel::Unigram("世事", 0),
+                              LanguageModel::Unigram("試試", -1),
+                              LanguageModel::Unigram("逝世", -2)});
+  ASSERT_TRUE(grid.refreshNodesForReading("ㄕˋ-ㄕˋ"));
+  EXPECT_EQ(displayedWalk.valuesAsStrings(),
+            (std::vector<std::string>{"試試", "就", "試試"}));
+  EXPECT_EQ(grid.walk().valuesAsStrings(),
+            (std::vector<std::string>{"世事", "就", "世事"}));
+
+  lm->setUnigrams("ㄕˋ-ㄕˋ", {LanguageModel::Unigram("逝世", 0)});
+  ASSERT_TRUE(grid.refreshNodesForReading("ㄕˋ-ㄕˋ"));
+  EXPECT_EQ(displayedWalk.valuesAsStrings(),
+            (std::vector<std::string>{"試試", "就", "試試"}));
+  EXPECT_EQ(grid.walk().valuesAsStrings(),
+            (std::vector<std::string>{"逝世", "就", "逝世"}));
+
+  lm->removeUnigrams("ㄕˋ-ㄕˋ");
+  ASSERT_TRUE(grid.refreshNodesForReading("ㄕˋ-ㄕˋ"));
+  EXPECT_EQ(grid.spans()[0].nodeOf(2), nullptr);
+  EXPECT_EQ(grid.spans()[3].nodeOf(2), nullptr);
+  EXPECT_EQ(displayedWalk.valuesAsStrings(),
+            (std::vector<std::string>{"試試", "就", "試試"}));
+  EXPECT_EQ(grid.walk().valuesAsStrings(),
+            (std::vector<std::string>{"是", "是", "就", "是", "是"}));
+}
+
+TEST(ReadingGridTest,
+     RefreshRepeatedReadingDoesNotRestoreMissingCandidateOverride) {
+  constexpr char kData[] = R"(
+ㄕˋ 是 -1
+ㄕˋ 事 -2
+ㄐㄧㄡˋ 就 -1
+ㄕˋ-ㄕˋ 試試 -1
+ㄕˋ-ㄕˋ 逝世 -2
+)";
+  auto lm = std::make_shared<SimpleLM>(kData);
+  ReadingGrid grid(lm);
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  ASSERT_TRUE(grid.insertReading("ㄐㄧㄡˋ"));
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  ASSERT_TRUE(grid.insertReading("ㄕˋ"));
+  ASSERT_TRUE(grid.overrideCandidate(0, "逝世"));
+  auto displayedWalk = grid.walk();
+  EXPECT_EQ(displayedWalk.valuesAsStrings(),
+            (std::vector<std::string>{"逝世", "就", "試試"}));
+
+  // Model the language model state after 逝世 is excluded. The refreshed
+  // nodes cannot restore that candidate override, while the existing walk
+  // continues to hold its original nodes.
+  lm->setUnigrams("ㄕˋ-ㄕˋ", {LanguageModel::Unigram("試試", -1)});
+  ASSERT_TRUE(grid.refreshNodesForReading("ㄕˋ-ㄕˋ"));
+  const auto refreshedFrontNode = grid.spans()[0].nodeOf(2);
+  const auto refreshedBackNode = grid.spans()[3].nodeOf(2);
+  ASSERT_NE(refreshedFrontNode, nullptr);
+  ASSERT_NE(refreshedBackNode, nullptr);
+  EXPECT_FALSE(refreshedFrontNode->isOverridden());
+  EXPECT_FALSE(Contains(grid.candidatesAt(0), "逝世"));
+  EXPECT_FALSE(Contains(grid.candidatesAt(3), "逝世"));
+  EXPECT_EQ(displayedWalk.valuesAsStrings(),
+            (std::vector<std::string>{"逝世", "就", "試試"}));
+  EXPECT_EQ(grid.walk().valuesAsStrings(),
+            (std::vector<std::string>{"試試", "就", "試試"}));
 }
 
 TEST(ReadingGridTest, InsertReadingAcceptsReadingOwnedByGrid) {

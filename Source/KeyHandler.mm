@@ -1327,13 +1327,13 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
             errorCallback();
             return YES;
         }
-        if (![self.delegate keyHandlerDidRequestReloadLanguageModel:self] || !_grid->refresh()) {
+        if (![self.delegate keyHandlerDidRequestReloadLanguageModel:self] ||
+            !_grid->refreshNodesForReading(state.selectedReading.UTF8String)) {
             errorCallback();
             stateCallback(state);
             return YES;
         }
-        [self _walk];
-        InputStateInputting *inputting = (InputStateInputting *)[self buildInputtingState];
+        InputStateInputting *inputting = [state convertToInputting];
         stateCallback(inputting);
         return YES;
     }
@@ -1564,12 +1564,11 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
                     }
                     if (![strongSelf.delegate keyHandler:strongSelf didRequestBoostScoreForPhrase:candidate.value reading:reading] ||
                         ![strongSelf.delegate keyHandlerDidRequestReloadLanguageModel:strongSelf] ||
-                        !strongSelf->_grid->refresh()) {
+                        !strongSelf->_grid->refreshNodesForReading(reading.UTF8String)) {
                         errorCallback();
                         stateCallback(currentState);
                         return;
                     }
-                    [strongSelf _walk];
                     InputStateInputting *inputting = (InputStateInputting *)[strongSelf buildInputtingState];
                     stateCallback(inputting);
                 };
@@ -1584,12 +1583,11 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
                     }
                     if (![strongSelf.delegate keyHandler:strongSelf didRequestExcludePhrase:candidate.value reading:reading] ||
                         ![strongSelf.delegate keyHandlerDidRequestReloadLanguageModel:strongSelf] ||
-                        !strongSelf->_grid->refresh()) {
+                        !strongSelf->_grid->refreshNodesForReading(reading.UTF8String)) {
                         errorCallback();
                         stateCallback(currentState);
                         return;
                     }
-                    [strongSelf _walk];
                     InputStateInputting *inputting = (InputStateInputting *)[strongSelf buildInputtingState];
                     stateCallback(inputting);
                 };

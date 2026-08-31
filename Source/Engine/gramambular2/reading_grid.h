@@ -75,9 +75,10 @@ class ReadingGrid {
   // Delete the reading after the cursor, like Del. Cursor is unmoved.
   bool deleteReadingAfterCursor();
 
-  // Rebuild all nodes using the current language model while preserving the
-  // readings and cursor.
-  bool refresh();
+  // Adds, replaces, or removes nodes in every span whose combined reading
+  // matches the given reading using the current language model. Other nodes,
+  // readings, and the cursor are preserved.
+  bool refreshNodesForReading(const std::string& reading);
 
   static constexpr size_t kMaximumSpanLength = 8;
   static constexpr char kDefaultSeparator[] = "-";
@@ -146,6 +147,9 @@ class ReadingGrid {
     void reset();
 
     bool selectOverrideUnigram(const std::string& value, OverrideType type);
+
+    // Restores another node's override if the same unigram still exists.
+    bool restoreOverrideFrom(const Node& node);
 
     // A sufficiently high score to cause the walk to go through an overriding
     // node. Although this can be 0, setting it to a positive value has the
@@ -248,6 +252,7 @@ class ReadingGrid {
    public:
     void clear();
     void add(const NodePtr& node);
+    void removeNodeOfLength(size_t length);
     void removeNodesOfOrLongerThan(size_t length);
     [[nodiscard]] const NodePtr& nodeOf(size_t length) const;
     [[nodiscard]] size_t maxLength() const { return maxLength_; }

@@ -98,25 +98,55 @@ bool ReadingGrid::deleteReadingAfterCursor() {
   return true;
 }
 
-bool ReadingGrid::refresh() {
-  std::vector<Span> refreshedSpans(readings_.size());
+bool ReadingGrid::refreshNodesForReading(const std::string& reading) {
+  if (reading.empty()) {
+    return false;
+  }
+
+  struct MatchingSpan {
+    size_t position;
+    size_t length;
+  };
+  std::vector<MatchingSpan> matchingSpans;
   for (size_t pos = 0; pos < readings_.size(); ++pos) {
     size_t maximumLength = std::min(kMaximumSpanLength, readings_.size() - pos);
     for (size_t len = 1; len <= maximumLength; ++len) {
       std::string combinedReading =
           combineReading(readings_.begin() + static_cast<ptrdiff_t>(pos),
                          readings_.begin() + static_cast<ptrdiff_t>(pos + len));
-      auto unigrams = lm_.getUnigrams(combinedReading);
-      if (!unigrams.empty()) {
-        refreshedSpans[pos].add(std::make_shared<Node>(
-            std::move(combinedReading), len, std::move(unigrams)));
+      if (combinedReading == reading) {
+        matchingSpans.push_back({pos, len});
       }
     }
-    if (refreshedSpans[pos].nodeOf(1) == nullptr) {
-      return false;
-    }
   }
-  spans_ = std::move(refreshedSpans);
+
+  if (matchingSpans.empty()) {
+    return false;
+  }
+
+  auto unigrams = lm_.getUnigrams(reading);
+  bool wouldRemoveSingleReadingNode =
+      std::any_of(matchingSpans.cbegin(), matchingSpans.cend(),
+                  [](const MatchingSpan& span) { return span.length == 1; });
+  if (unigrams.empty() && wouldRemoveSingleReadingNode) {
+    return false;
+  }
+
+  for (const MatchingSpan& matchingSpan : matchingSpans) {
+    const NodePtr existingNode =
+        spans_[matchingSpan.position].nodeOf(matchingSpan.length);
+    if (unigrams.empty()) {
+      spans_[matchingSpan.position].removeNodeOfLength(matchingSpan.length);
+      continue;
+    }
+
+    auto refreshedNode =
+        std::make_shared<Node>(reading, matchingSpan.length, unigrams);
+    if (existingNode != nullptr) {
+      refreshedNode->restoreOverrideFrom(*existingNode);
+    }
+    spans_[matchingSpan.position].add(std::move(refreshedNode));
+  }
   return true;
 }
 
@@ -514,6 +544,13 @@ bool ReadingGrid::Node::selectOverrideUnigram(
   return false;
 }
 
+bool ReadingGrid::Node::restoreOverrideFrom(const Node& node) {
+  if (!node.isOverridden()) {
+    return false;
+  }
+  return selectOverrideUnigram(node.value(), node.overrideType_);
+}
+
 std::vector<ReadingGrid::NodePtr>::const_iterator
 ReadingGrid::WalkResult::findNodeAt(size_t cursor,
                                     size_t* outCursorPastNode) const {
@@ -583,6 +620,17 @@ void ReadingGrid::Span::add(const ReadingGrid::NodePtr& node) {
          node->spanningLength() <= kMaximumSpanLength);
   nodes_[node->spanningLength() - 1] = node;
   maxLength_ = std::max(maxLength_, node->spanningLength());
+}
+
+void ReadingGrid::Span::removeNodeOfLength(size_t length) {
+  assert(length > 0 && length <= kMaximumSpanLength);
+  nodes_[length - 1] = nullptr;
+  if (maxLength_ != length) {
+    return;
+  }
+  while (maxLength_ > 0 && nodes_[maxLength_ - 1] == nullptr) {
+    --maxLength_;
+  }
 }
 
 void ReadingGrid::Span::removeNodesOfOrLongerThan(size_t length) {
