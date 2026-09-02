@@ -212,6 +212,8 @@
 "Shift + Letter Keys:" = "Shift + 字母鍵：";
 "Input uppercase letters directly" = "直接輸入大寫字母";
 "Input lowercased letters to buffer" = "在輸入緩衝區中輸入小寫字母";
+"Option + Key:" = "Option + 按鍵：";
+"Input letters, numbers, punctuation, and symbols directly" = "直接輸入字母、數字、標點與符號";
 "ESC Key:" = "ESC 鍵：";
 "Beep upon input error" = "輸入錯誤時發出警示聲";
 "Trigger associated phrases" = "使用聯想詞功能";

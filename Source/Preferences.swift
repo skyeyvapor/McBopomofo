@@ -50,6 +50,7 @@ private let kPhraseReplacementEnabledKey = "PhraseReplacementEnabled"
 private let kChineseConversionStyleKey = "ChineseConversionStyle"
 private let kAssociatedPhrasesEnabledKey = "AssociatedPhrasesEnabled"
 private let kLetterBehaviorKey = "LetterBehavior"
+private let kOptionKeyDirectInputEnabledKey = "OptionKeyDirectInputEnabled"
 private let kControlEnterOutputKey = "ControlEnterOutput"
 private let kShiftEnterEnabledKey = "ShiftEnterEnabled"
 private let kRepeatedPunctuationToSelectCandidateEnabledKey =
@@ -230,6 +231,8 @@ class Preferences: NSObject {
             kPhraseReplacementEnabledKey,
             kChineseConversionStyleKey,
             kAssociatedPhrasesEnabledKey,
+            kLetterBehaviorKey,
+            kOptionKeyDirectInputEnabledKey,
             kControlEnterOutputKey,
             kShiftEnterEnabledKey,
             kRepeatedPunctuationToSelectCandidateEnabledKey,
@@ -256,6 +259,7 @@ class Preferences: NSObject {
         Preferences.phraseReplacementEnabled = Preferences.phraseReplacementEnabled
         Preferences.associatedPhrasesEnabled = Preferences.associatedPhrasesEnabled
         Preferences.letterBehavior = Preferences.letterBehavior
+        Preferences.optionKeyDirectInputEnabled = Preferences.optionKeyDirectInputEnabled
         Preferences.controlEnterOutput = Preferences.controlEnterOutput
         Preferences.shiftEnterEnabled = Preferences.shiftEnterEnabled
         Preferences.repeatedPunctuationToSelectCandidateEnabled =
@@ -486,6 +490,10 @@ extension Preferences {
     @UserDefault(key: kLetterBehaviorKey, defaultValue: 0)
     @objc static var letterBehavior: Int
 
+    /// Whether Option + a text key directly inputs letters, numbers, punctuation, and symbols.
+    @UserDefault(key: kOptionKeyDirectInputEnabledKey, defaultValue: false)
+    @objc static var optionKeyDirectInputEnabled: Bool
+
     /// The behavior of pressing Ctrl + Enter.
     ///
     /// - 0: Disabled.
@@ -651,6 +659,9 @@ extension Preferences {
         )
 
         lines.append("  - Letter Keys: \(Preferences.letterBehavior)")
+        lines.append(
+            "  - Option Key Direct Input: \(Preferences.optionKeyDirectInputEnabled ? "Enabled" : "Disabled")"
+        )
         lines.append("  - Ctrl + Enter Key: \(Preferences.controlEnterOutput.name)")
         lines.append(
             "  - Shift + Enter Key For Associated Phrases: \(Preferences.shiftEnterEnabled ? "Enabled" : "Disabled")"

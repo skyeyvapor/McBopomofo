@@ -39,9 +39,15 @@ enum KeyCode: UInt16 {
 }
 
 class KeyHandlerInput: NSObject {
+    private static let allowedDirectInputCharacterSet = CharacterSet.alphanumerics
+        .union(.punctuationCharacters)
+        .union(.symbols)
+        .union(.nonBaseCharacters)
+
     @objc private(set) var useVerticalMode: Bool
     @objc private(set) var inputText: String?
     @objc private(set) var inputTextIgnoringModifiers: String?
+    @objc private(set) var directInputText: String?
     @objc private(set) var charCode: UInt16
     @objc private(set) var keyCode: UInt16
     private var flags: NSEvent.ModifierFlags
@@ -52,9 +58,10 @@ class KeyHandlerInput: NSObject {
     private var verticalModeOnlyChooseCandidateKey: KeyCode
     @objc private(set) var emacsKey: McBopomofoEmacsKey
 
-    @objc init(inputText: String?, keyCode: UInt16, charCode: UInt16, flags: NSEvent.ModifierFlags, isVerticalMode: Bool, inputTextIgnoringModifiers: String? = nil) {
+    @objc init(inputText: String?, keyCode: UInt16, charCode: UInt16, flags: NSEvent.ModifierFlags, isVerticalMode: Bool, inputTextIgnoringModifiers: String? = nil, directInputText: String? = nil) {
         self.inputText = inputText
         self.inputTextIgnoringModifiers = inputTextIgnoringModifiers ?? inputText
+        self.directInputText = directInputText
         self.keyCode = keyCode
         self.charCode = charCode
         self.flags = flags
@@ -71,6 +78,7 @@ class KeyHandlerInput: NSObject {
     @objc init(event: NSEvent, isVerticalMode: Bool) {
         inputText = event.characters
         inputTextIgnoringModifiers = event.charactersIgnoringModifiers
+        directInputText = event.characters(byApplyingModifiers: [])
         keyCode = event.keyCode
         flags = event.modifierFlags
         useVerticalMode = isVerticalMode
@@ -92,7 +100,7 @@ class KeyHandlerInput: NSObject {
     }
 
     override var description: String {
-        return "<\(super.description) inputText:\(String(describing: inputText)), inputTextIgnoringModifiers:\(String(describing: inputTextIgnoringModifiers)) charCode:\(charCode), keyCode:\(keyCode), flags:\(flags), cursorForwardKey:\(cursorForwardKey), cursorBackwardKey:\(cursorBackwardKey), extraChooseCandidateKey:\(extraChooseCandidateKey), absorbedArrowKey:\(absorbedArrowKey),  verticalModeOnlyChooseCandidateKey:\(verticalModeOnlyChooseCandidateKey), emacsKey:\(emacsKey), useVerticalMode:\(useVerticalMode)>"
+        return "<\(super.description) inputText:\(String(describing: inputText)), inputTextIgnoringModifiers:\(String(describing: inputTextIgnoringModifiers)), directInputText:\(String(describing: directInputText)) charCode:\(charCode), keyCode:\(keyCode), flags:\(flags), cursorForwardKey:\(cursorForwardKey), cursorBackwardKey:\(cursorBackwardKey), extraChooseCandidateKey:\(extraChooseCandidateKey), absorbedArrowKey:\(absorbedArrowKey),  verticalModeOnlyChooseCandidateKey:\(verticalModeOnlyChooseCandidateKey), emacsKey:\(emacsKey), useVerticalMode:\(useVerticalMode)>"
     }
 
     @objc var isShiftHold: Bool {
@@ -121,6 +129,15 @@ class KeyHandlerInput: NSObject {
 
     @objc var isNumericPad: Bool {
         flags.contains([.numericPad])
+    }
+
+    @objc var isValidDirectInputText: Bool {
+        guard let directInputText, !directInputText.isEmpty else {
+            return false
+        }
+        return directInputText.unicodeScalars.allSatisfy {
+            Self.allowedDirectInputCharacterSet.contains($0)
+        }
     }
 
     @objc var isReservedKey: Bool {

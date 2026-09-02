@@ -499,6 +499,12 @@ private struct BasicPreferencesView: View {
                 .fixedSize()
             }
 
+            PreferenceRow(localized("Option + Key:")) {
+                Toggle(
+                    localized("Input letters, numbers, punctuation, and symbols directly"),
+                    isOn: $preferences.optionKeyDirectInputEnabled)
+            }
+
             PreferenceRow(localized("Shift + Enter Key:")) {
                 Toggle(
                     localized("Trigger associated phrases"), isOn: $preferences.shiftEnterEnabled)

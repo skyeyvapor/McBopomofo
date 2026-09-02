@@ -22,6 +22,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 import CandidateUI
+import Carbon.HIToolbox
 import XCTest
 
 @testable import McBopomofo
@@ -537,6 +538,217 @@ class KeyHandlerBopomofoTests: XCTestCase {
         XCTAssertTrue(state is InputState.Inputting, "\(state)")
         if let state = state as? InputState.Inputting {
             XCTAssertEqual(state.composingBuffer, "一a")
+        }
+    }
+
+    func testOptionKeyDirectInputDoesNotHandleWhenDisabled() {
+        let current = Preferences.optionKeyDirectInputEnabled
+        addTeardownBlock {
+            Preferences.optionKeyDirectInputEnabled = current
+        }
+        Preferences.optionKeyDirectInputEnabled = false
+
+        let input = KeyHandlerInput(
+            inputText: "å", keyCode: 0, charCode: charCode("å"), flags: .option,
+            isVerticalMode: false, inputTextIgnoringModifiers: "å", directInputText: "a")
+        var state: InputState = InputState.Empty()
+
+        let result = handler.handle(input: input, state: state) { newState in
+            state = newState
+        } errorCallback: {
+        }
+
+        XCTAssertFalse(result)
+        XCTAssertTrue(state is InputState.Empty, "\(state)")
+    }
+
+    func testOptionKeyDirectInputAcceptsValidDirectInputText() {
+        let current = Preferences.optionKeyDirectInputEnabled
+        addTeardownBlock {
+            Preferences.optionKeyDirectInputEnabled = current
+        }
+        Preferences.optionKeyDirectInputEnabled = true
+
+        let texts = Array(
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-=[]\\;',./`éß€"
+        ).map(String.init) + ["e\u{301}", "ss"]
+
+        for text in texts {
+            let input = KeyHandlerInput(
+                inputText: "modified", keyCode: 0, charCode: 0, flags: .option,
+                isVerticalMode: false, inputTextIgnoringModifiers: "modified",
+                directInputText: text)
+            var state: InputState = InputState.Empty()
+            var committedText: String?
+
+            let result = handler.handle(input: input, state: state) { newState in
+                state = newState
+                if let committing = newState as? InputState.Committing {
+                    committedText = committing.poppedText
+                }
+            } errorCallback: {
+            }
+
+            XCTAssertTrue(input.isValidDirectInputText, "Expected \(text) to be valid")
+            XCTAssertTrue(result, "Expected Option + \(text) to be handled")
+            XCTAssertEqual(committedText, text)
+            XCTAssertTrue(state is InputState.Empty, "\(state)")
+        }
+    }
+
+    func testOptionKeyDirectInputRejectsInvalidDirectInputText() {
+        let current = Preferences.optionKeyDirectInputEnabled
+        addTeardownBlock {
+            Preferences.optionKeyDirectInputEnabled = current
+        }
+        Preferences.optionKeyDirectInputEnabled = true
+
+        let texts: [String?] = [nil, "", " ", "a b", "\n", "\u{F700}"]
+
+        for text in texts {
+            let input = KeyHandlerInput(
+                inputText: "modified", keyCode: 0, charCode: 0, flags: .option,
+                isVerticalMode: false, inputTextIgnoringModifiers: "modified",
+                directInputText: text)
+            var state: InputState = InputState.Empty()
+
+            XCTAssertFalse(input.isValidDirectInputText, "Expected \(String(describing: text)) to be invalid")
+            let result = handler.handle(input: input, state: state) { newState in
+                state = newState
+            } errorCallback: {
+            }
+
+            XCTAssertFalse(result)
+            XCTAssertTrue(state is InputState.Empty, "\(state)")
+        }
+    }
+
+    func testOptionKeyDirectInputUsesTranslatedTextInsteadOfPhysicalKeyCode() {
+        let current = Preferences.optionKeyDirectInputEnabled
+        addTeardownBlock {
+            Preferences.optionKeyDirectInputEnabled = current
+        }
+        Preferences.optionKeyDirectInputEnabled = true
+
+        let input = KeyHandlerInput(
+            inputText: "", keyCode: UInt16(kVK_ANSI_Q), charCode: 0, flags: .option,
+            isVerticalMode: false, inputTextIgnoringModifiers: "'", directInputText: "'")
+        var state: InputState = InputState.Empty()
+        var committedText = ""
+
+        let result = handler.handle(input: input, state: state) { newState in
+            state = newState
+            if let committing = newState as? InputState.Committing {
+                committedText += committing.poppedText
+            }
+        } errorCallback: {
+        }
+
+        XCTAssertTrue(result)
+        XCTAssertEqual(committedText, "'")
+        XCTAssertTrue(state is InputState.Empty, "\(state)")
+    }
+
+    func testOptionKeyDirectInputTranslatesDeadKeysToBaseCharacters() throws {
+        let current = Preferences.optionKeyDirectInputEnabled
+        addTeardownBlock {
+            Preferences.optionKeyDirectInputEnabled = current
+        }
+        Preferences.optionKeyDirectInputEnabled = true
+
+        let inputs: [(keyCode: Int, accent: String, expected: String)] = [
+            (kVK_ANSI_E, "´", "e"),
+            (kVK_ANSI_U, "¨", "u"),
+            (kVK_ANSI_I, "ˆ", "i"),
+            (kVK_ANSI_N, "˜", "n"),
+        ]
+
+        for (keyCode, accent, expected) in inputs {
+            let event = try XCTUnwrap(
+                NSEvent.keyEvent(
+                    with: .keyDown, location: .zero, modifierFlags: .option, timestamp: 0,
+                    windowNumber: 0, context: nil, characters: accent,
+                    charactersIgnoringModifiers: accent, isARepeat: false,
+                    keyCode: UInt16(keyCode)))
+            let input = KeyHandlerInput(event: event, isVerticalMode: false)
+            var state: InputState = InputState.Empty()
+            var committedText: String?
+
+            XCTAssertEqual(input.directInputText, expected)
+            let result = handler.handle(input: input, state: state) { newState in
+                state = newState
+                if let committing = newState as? InputState.Committing {
+                    committedText = committing.poppedText
+                }
+            } errorCallback: {
+            }
+
+            XCTAssertTrue(result)
+            XCTAssertEqual(committedText, expected)
+            XCTAssertTrue(state is InputState.Empty, "\(state)")
+        }
+    }
+
+    func testOptionKeyDirectInputCommitsExistingCompositionFirst() {
+        let current = Preferences.optionKeyDirectInputEnabled
+        addTeardownBlock {
+            Preferences.optionKeyDirectInputEnabled = current
+        }
+        Preferences.optionKeyDirectInputEnabled = true
+
+        var state: InputState = InputState.Empty()
+        for key in ["u", "6"] {
+            let input = KeyHandlerInput(
+                inputText: key, keyCode: 0, charCode: charCode(key), flags: [],
+                isVerticalMode: false)
+            handler.handle(input: input, state: state) { newState in
+                state = newState
+            } errorCallback: {
+            }
+        }
+
+        var committedTexts: [String] = []
+        let input = KeyHandlerInput(
+            inputText: "´", keyCode: 0, charCode: charCode("´"), flags: .option,
+            isVerticalMode: false, inputTextIgnoringModifiers: "´", directInputText: "e")
+        let result = handler.handle(input: input, state: state) { newState in
+            state = newState
+            if let committing = newState as? InputState.Committing {
+                committedTexts.append(committing.poppedText)
+            }
+        } errorCallback: {
+        }
+
+        XCTAssertTrue(result)
+        XCTAssertEqual(committedTexts, ["一", "e"])
+        XCTAssertTrue(state is InputState.Empty, "\(state)")
+    }
+
+    func testOptionKeyDirectInputPreservesOtherModifierCombinations() {
+        let current = Preferences.optionKeyDirectInputEnabled
+        addTeardownBlock {
+            Preferences.optionKeyDirectInputEnabled = current
+        }
+        Preferences.optionKeyDirectInputEnabled = true
+
+        let modifierCombinations: [NSEvent.ModifierFlags] = [
+            [.option, .shift], [.option, .command], [.option, .control],
+        ]
+
+        for flags in modifierCombinations {
+            let input = KeyHandlerInput(
+                inputText: "modified", keyCode: 0, charCode: 0, flags: flags,
+                isVerticalMode: false, inputTextIgnoringModifiers: "modified",
+                directInputText: "a")
+            var state: InputState = InputState.Empty()
+
+            let result = handler.handle(input: input, state: state) { newState in
+                state = newState
+            } errorCallback: {
+            }
+
+            XCTAssertFalse(result, "Expected \(flags) to preserve the existing behavior")
+            XCTAssertTrue(state is InputState.Empty, "\(state)")
         }
     }
 

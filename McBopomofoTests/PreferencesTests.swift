@@ -82,6 +82,14 @@ final class PreferencesTests {
         #expect(Preferences.basisKeyboardLayout == "com.apple.keylayout.ABC")
     }
 
+    @Test("Test Option key direct input setting")
+    func testOptionKeyDirectInputEnabled() {
+        #expect(Preferences.optionKeyDirectInputEnabled == false)
+        Preferences.optionKeyDirectInputEnabled = true
+        #expect(Preferences.optionKeyDirectInputEnabled == true)
+        #expect(UserDefaults.standard.bool(forKey: "OptionKeyDirectInputEnabled"))
+    }
+
     @Test("Test function keyboard layout setting")
     func testFunctionKeyboardLayout() {
         #expect(Preferences.functionKeyboardLayout == "com.apple.keylayout.US")

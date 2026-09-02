@@ -146,6 +146,14 @@ final class PreferencesViewModel: NSObject, ObservableObject {
         }
     }
 
+    var optionKeyDirectInputEnabled: Bool {
+        get { Preferences.optionKeyDirectInputEnabled }
+        set {
+            objectWillChange.send()
+            Preferences.optionKeyDirectInputEnabled = newValue
+        }
+    }
+
     var shiftEnterEnabled: Bool {
         get { Preferences.shiftEnterEnabled }
         set {

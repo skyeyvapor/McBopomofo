@@ -212,6 +212,8 @@
 "Shift + Letter Keys:" = "Shift + Letter Keys:";
 "Input uppercase letters directly" = "Input uppercase letters directly";
 "Input lowercased letters to buffer" = "Input lowercased letters to buffer";
+"Option + Key:" = "Option + Key:";
+"Input letters, numbers, punctuation, and symbols directly" = "Input letters, numbers, punctuation, and symbols directly";
 "ESC Key:" = "ESC Key:";
 "Beep upon input error" = "Beep upon input error";
 "Trigger associated phrases" = "Trigger associated phrases";

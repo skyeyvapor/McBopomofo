@@ -367,6 +367,18 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
         return YES;
     }
 
+    if (Preferences.optionKeyDirectInputEnabled && input.isOptionHold &&
+        !input.isShiftHold && !input.isCommandHold && !input.isControlHold) {
+        NSString *directText = input.directInputText;
+        if (input.isValidDirectInputText) {
+            [self handleForceCommitWithStateCallback:stateCallback];
+            InputStateCommitting *committingState = [[InputStateCommitting alloc] initWithPoppedText:directText];
+            stateCallback(committingState);
+            stateCallback([[InputStateEmpty alloc] init]);
+            return YES;
+        }
+    }
+
     // if the inputText is empty, it's a function key combination, we ignore it
     if (!input.inputText.length) {
         return NO;
