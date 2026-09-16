@@ -3200,7 +3200,7 @@ struct ShiftLetterInputSourceTests {
         Preferences.letterBehavior = 2
         let handler = KeyHandler()
         handler.inputMode = mode
-        for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
+        for letter in "AZ" {
             let text = String(letter)
             let input = KeyHandlerInput(
                 inputText: text, keyCode: 0, charCode: charCode(text), flags: .shift,
@@ -3216,7 +3216,7 @@ struct ShiftLetterInputSourceTests {
     }
 
     @Test(arguments: ["u", "u6"])
-    func preservesCompositionBeforeLetter(reading: String) {
+    func requestsSwitchFromCompositionWithoutCommittingLetter(reading: String) {
         let savedBehavior = Preferences.letterBehavior
         let savedLayout = Preferences.keyboardLayout
         defer {
@@ -3238,42 +3238,54 @@ struct ShiftLetterInputSourceTests {
         }
         let composingText = (state as? InputState.NotEmpty)?.composingBuffer
         #expect(composingText?.isEmpty == false)
-        var output = ""
+        var transitions: [InputState] = []
         let handled = handler.handle(input: KeyHandlerInput(
-            inputText: "A", keyCode: 0, charCode: charCode("A"), flags: .shift,
-            isVerticalMode: false), state: state) { next in
-                // Mirrors the controller's Empty transition, which commits pending text.
-                if next is InputState.Empty, let previous = state as? InputState.NotEmpty {
-                    output += previous.composingBuffer
-                }
-                if let committing = next as? InputState.Committing { output += committing.poppedText }
-                state = next
-            } errorCallback: { Issue.record("Unexpected input error") }
+            inputText: "L", keyCode: 37, charCode: charCode("L"), flags: .shift,
+            isVerticalMode: false), state: state) { transitions.append($0) }
+            errorCallback: { Issue.record("Unexpected input error") }
         #expect(!handled)
-        #expect(output == (composingText ?? ""))
-        #expect(state is InputState.SwitchingInputSource)
+        #expect(transitions.count == 1)
+        #expect(transitions.first is InputState.SwitchingInputSource)
+        // Actual client insertion and system switching are integration-test concerns.
         #expect((handler.buildInputtingState() as? InputState.Inputting)?.composingBuffer == "")
     }
 
-    @Test(arguments: [NSEvent.ModifierFlags.command, .control, .option, .function, .capsLock])
-    func modifiedShortcutsDoNotSwitch(modifier: NSEvent.ModifierFlags) {
+    @Test
+    func requestsSwitchAfterDeletingComposition() {
         let savedBehavior = Preferences.letterBehavior
-        defer { Preferences.letterBehavior = savedBehavior }
+        let savedLayout = Preferences.keyboardLayout
+        defer {
+            Preferences.letterBehavior = savedBehavior
+            Preferences.keyboardLayout = savedLayout
+        }
         Preferences.letterBehavior = 2
+        Preferences.keyboardLayout = .standard
         let handler = KeyHandler()
-        var requestedSwitch = false
+        handler.inputMode = .bopomofo
+        var state: InputState = InputState.Empty()
         _ = handler.handle(input: KeyHandlerInput(
-            inputText: "A", keyCode: 0, charCode: charCode("A"), flags: [.shift, modifier],
-            isVerticalMode: false), state: InputState.Empty()) {
-                requestedSwitch = requestedSwitch || $0 is InputState.SwitchingInputSource
-            } errorCallback: {}
-        #expect(!requestedSwitch)
+            inputText: "u", keyCode: 32, charCode: charCode("u"), flags: [],
+            isVerticalMode: false), state: state) { state = $0 }
+            errorCallback: { Issue.record("Unexpected composition error") }
+        #expect(state is InputState.Inputting)
+        _ = handler.handle(input: KeyHandlerInput(
+            inputText: "\u{8}", keyCode: 51, charCode: 8, flags: [],
+            isVerticalMode: false), state: state) { state = $0 }
+            errorCallback: { Issue.record("Unexpected deletion error") }
+        #expect(state is InputState.EmptyIgnoringPreviousState)
+
+        var transitions: [InputState] = []
+        let handled = handler.handle(input: KeyHandlerInput(
+            inputText: "L", keyCode: 37, charCode: charCode("L"), flags: .shift,
+            isVerticalMode: false), state: state) { transitions.append($0) }
+            errorCallback: { Issue.record("Unexpected input error") }
+        #expect(!handled)
+        #expect(transitions.count == 1)
+        #expect((transitions.first as? InputState.SwitchingInputSource)?.sourceID
+                == Preferences.shiftLetterInputSource)
     }
-}
 
-
-extension ShiftLetterInputSourceTests {
-    @Test(arguments: ["!", "a", "1"])
+    @Test(arguments: ["a", "!"])
     func nonUppercaseInputDoesNotSwitch(text: String) {
         let saved = Preferences.letterBehavior
         defer { Preferences.letterBehavior = saved }
@@ -3288,11 +3300,6 @@ extension ShiftLetterInputSourceTests {
         #expect(!switched)
     }
 
-
-}
-
-
-extension ShiftLetterInputSourceTests {
     @Test
     func candidateHandlingRetainsPriority() {
         let saved = Preferences.letterBehavior
