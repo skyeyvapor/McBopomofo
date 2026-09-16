@@ -668,6 +668,21 @@ private struct AdvancedPreferencesView: View {
                 Toggle(localized("Input Big 5 Code"), isOn: $preferences.big5InputEnabled)
             }
 
+            PreferenceRow(localized("Command Key:")) {
+                HStack {
+                    Toggle(localized("When pressed, switch input source to"),
+                           isOn: $preferences.commandInputSourceEnabled)
+                    Picker("", selection: $preferences.commandInputSource) {
+                        ForEach(preferences.commandInputSourceOptions) { source in
+                            Text(source.localizedName).tag(source.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .disabled(!preferences.commandInputSourceEnabled)
+                }
+            }
+
             PreferenceRow(localized("Punctuation Symbols:")) {
                 Toggle(
                     localized("Repeated key to next candidate"),

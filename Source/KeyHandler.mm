@@ -806,7 +806,7 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
             }
         } else if (Preferences.letterBehavior == 2) {
             [self clear];
-            stateCallback([[InputStateSwitchingInputSource alloc] init]);
+            stateCallback([[InputStateSwitchingInputSource alloc] initWithSourceID:Preferences.shiftLetterInputSource]);
             return NO;
         } else {
             if ([state isKindOfClass:[InputStateNotEmpty class]]) {

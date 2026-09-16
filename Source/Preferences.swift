@@ -52,6 +52,8 @@ private let kAssociatedPhrasesEnabledKey = "AssociatedPhrasesEnabled"
 private let kLetterBehaviorKey = "LetterBehavior"
 private let kShiftLetterInputSourceKey = "ShiftLetterInputSource"
 private let kControlEnterOutputKey = "ControlEnterOutput"
+private let kCommandInputSourceEnabledKey = "CommandSwitchInputSourceEnabled"
+private let kCommandInputSourceKey = "CommandInputSource"
 private let kShiftEnterEnabledKey = "ShiftEnterEnabled"
 private let kRepeatedPunctuationToSelectCandidateEnabledKey =
     "RepeatedPunctuationToSelectCandidateEnabled"
@@ -234,6 +236,8 @@ class Preferences: NSObject {
             kChineseConversionStyleKey,
             kAssociatedPhrasesEnabledKey,
             kControlEnterOutputKey,
+            kCommandInputSourceEnabledKey,
+            kCommandInputSourceKey,
             kShiftEnterEnabledKey,
             kRepeatedPunctuationToSelectCandidateEnabledKey,
             kUseCustomUserPhraseLocation,
@@ -261,6 +265,8 @@ class Preferences: NSObject {
         Preferences.letterBehavior = Preferences.letterBehavior
         Preferences.shiftLetterInputSource = Preferences.shiftLetterInputSource
         Preferences.controlEnterOutput = Preferences.controlEnterOutput
+        Preferences.commandInputSourceEnabled = Preferences.commandInputSourceEnabled
+        Preferences.commandInputSource = Preferences.commandInputSource
         Preferences.shiftEnterEnabled = Preferences.shiftEnterEnabled
         Preferences.repeatedPunctuationToSelectCandidateEnabled =
             Preferences.repeatedPunctuationToSelectCandidateEnabled
@@ -492,7 +498,7 @@ extension Preferences {
     @objc static var letterBehavior: Int
 
     @UserDefault(key: kShiftLetterInputSourceKey, defaultValue: "com.apple.keylayout.ABC")
-    static var shiftLetterInputSource: String
+    @objc static var shiftLetterInputSource: String
 
     /// The behavior of pressing Ctrl + Enter.
     ///
@@ -500,6 +506,12 @@ extension Preferences {
     /// - 1: Output BPMF readings.
     @EnumUserDefault(key: kControlEnterOutputKey, defaultValue: .off)
     @objc static var controlEnterOutput: ControlEnterOutput
+
+    @UserDefault(key: kCommandInputSourceEnabledKey, defaultValue: false)
+    static var commandInputSourceEnabled: Bool
+
+    @UserDefault(key: kCommandInputSourceKey, defaultValue: "com.apple.keylayout.ABC")
+    static var commandInputSource: String
 }
 
 @objc class UserPhraseLocationHelper: NSObject {

@@ -76,7 +76,14 @@ class InputState: NSObject {
 
     /// Requests an input source switch after all text has been committed.
     @objc(InputStateSwitchingInputSource)
-    class SwitchingInputSource: Empty {}
+    class SwitchingInputSource: Empty {
+        let sourceID: String
+
+        @objc init(sourceID: String) {
+            self.sourceID = sourceID
+            super.init()
+        }
+    }
 
     /// Represents that the composing buffer is empty.
     @objc(InputStateEmpty)

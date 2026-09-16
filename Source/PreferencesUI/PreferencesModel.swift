@@ -148,6 +148,24 @@ final class PreferencesViewModel: NSObject, ObservableObject {
         }
     }
 
+    var commandInputSourceEnabled: Bool {
+        get { Preferences.commandInputSourceEnabled }
+        set {
+            objectWillChange.send()
+            Preferences.commandInputSourceEnabled = newValue
+        }
+    }
+
+    @Published private(set) var commandInputSourceOptions: [KeyboardLayoutOption] = []
+
+    var commandInputSource: String {
+        get { Preferences.commandInputSource }
+        set {
+            objectWillChange.send()
+            Preferences.commandInputSource = newValue
+        }
+    }
+
     var letterBehavior: Int {
         get { Preferences.letterBehavior }
         set {
@@ -387,15 +405,20 @@ final class PreferencesViewModel: NSObject, ObservableObject {
         }
         basisKeyboardLayoutOptions = options
 
-        if !switchOptions.contains(where: { $0.id == shiftLetterInputSource }) {
-            let name = options.first(where: { $0.id == shiftLetterInputSource })?.localizedName ?? shiftLetterInputSource
-            switchOptions.append(
-                KeyboardLayoutOption(
-                    id: shiftLetterInputSource,
-                    localizedName: String(format: NSLocalizedString("%@ (Unavailable)", comment: ""), name)
+        func optionsIncludingSelection(_ sourceID: String) -> [KeyboardLayoutOption] {
+            var result = switchOptions
+            if !result.contains(where: { $0.id == sourceID }) {
+                let name = options.first(where: { $0.id == sourceID })?.localizedName ?? sourceID
+                result.append(
+                    KeyboardLayoutOption(
+                        id: sourceID,
+                        localizedName: String(format: NSLocalizedString("%@ (Unavailable)", comment: ""), name)
+                    )
                 )
-            )
+            }
+            return result
         }
-        shiftLetterInputSourceOptions = switchOptions
+        shiftLetterInputSourceOptions = optionsIncludingSelection(shiftLetterInputSource)
+        commandInputSourceOptions = optionsIncludingSelection(commandInputSource)
     }
 }

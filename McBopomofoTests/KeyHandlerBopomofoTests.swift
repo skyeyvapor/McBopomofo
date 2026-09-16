@@ -3211,7 +3211,7 @@ struct ShiftLetterInputSourceTests {
             } errorCallback: { Issue.record("Unexpected input error") }
             #expect(!handled)
             #expect(states.count == 1)
-            #expect(states.first is InputState.SwitchingInputSourcePassthrough)
+            #expect((states.first as? InputState.SwitchingInputSource)?.sourceID == Preferences.shiftLetterInputSource)
         }
     }
 
@@ -3251,7 +3251,7 @@ struct ShiftLetterInputSourceTests {
             } errorCallback: { Issue.record("Unexpected input error") }
         #expect(!handled)
         #expect(output == (composingText ?? ""))
-        #expect(state is InputState.SwitchingInputSourcePassthrough)
+        #expect(state is InputState.SwitchingInputSource)
         #expect((handler.buildInputtingState() as? InputState.Inputting)?.composingBuffer == "")
     }
 

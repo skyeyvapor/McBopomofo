@@ -226,6 +226,14 @@ class McBopomofoInputMethodController: IMKInputController {
         }
 
         if event.type == .flagsChanged {
+            if Preferences.commandInputSourceEnabled,
+               (event.keyCode == 55 || event.keyCode == 54),
+               event.modifierFlags.contains(.command) {
+                keyHandler.clear()
+                handle(state: InputState.SwitchingInputSource(sourceID: Preferences.commandInputSource), client: client)
+                return false
+            }
+
             if state is InputState.Empty {
                 return false
             }
@@ -403,7 +411,7 @@ extension McBopomofoInputMethodController {
         case let newState as InputState.SwitchingInputSource:
             handle(state: newState as InputState.Empty, previous: previous, client: client)
             state = .Empty()
-            InputSourceSwitcher.switchTo(Preferences.shiftLetterInputSource)
+            InputSourceSwitcher.switchTo(newState.sourceID)
         case let newState as InputState.Empty:
             handle(state: newState, previous: previous, client: client)
         case let newState as InputState.EmptyIgnoringPreviousState:

@@ -235,6 +235,8 @@
 "Ctrl + Enter Key:" = "Ctrl + Enter Key:";
 "Ctrl + ` Key:" = "Ctrl + ` Key:";
 "Ctrl + `  Key:" = "Ctrl + `  Key:";
+"Command Key:" = "Command Key:";
+"When pressed, switch input source to" = "When pressed, switch input source to";
 "Input Big 5 Code" = "Input Big 5 Code";
 "Punctuation Symbols:" = "Punctuation Symbols:";
 "Repeated key to next candidate" = "Repeated key to next candidate";
