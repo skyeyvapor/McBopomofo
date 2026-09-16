@@ -48,6 +48,14 @@ struct PreferencesView: View {
                 }
             }
             .background(Color(nsColor: .windowBackgroundColor))
+            .onAppear {
+                preferences.loadBasisKeyboardLayoutOptions()
+            }
+            .onReceive(
+                NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
+            ) { _ in
+                preferences.loadBasisKeyboardLayoutOptions()
+            }
             .onPreferenceChange(PreferencesContentHeightKey.self) { measurement in
                 guard let measurement else {
                     return
@@ -490,13 +498,32 @@ private struct BasicPreferencesView: View {
                 .padding(.vertical, 5)
 
             PreferenceRow(localized("Shift + Letter Keys:")) {
-                Picker("", selection: $preferences.letterBehavior) {
-                    Text(localized("Input uppercase letters directly")).tag(0)
-                    Text(localized("Input lowercased letters to buffer")).tag(1)
+                VStack(alignment: .leading, spacing: 8) {
+                    Picker("", selection: $preferences.letterBehavior) {
+                        Text(localized("Input uppercase letters directly")).tag(0)
+                        Text(localized("Input lowercased letters to buffer")).tag(1)
+                        Text(localized("Switch input source and input the letter")).tag(2)
+                    }
+                    .labelsHidden()
+                    .pickerStyle(RadioGroupPickerStyle())
+                    .fixedSize()
+
+                    if preferences.letterBehavior == 2 {
+                        HStack {
+                            Text(localized("Switch to"))
+                                .fixedSize()
+
+                            Picker("", selection: $preferences.shiftLetterInputSource) {
+                                ForEach(preferences.shiftLetterInputSourceOptions) { source in
+                                    Text(source.localizedName).tag(source.id)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            .fixedSize()
+                        }
+                    }
                 }
-                .labelsHidden()
-                .pickerStyle(RadioGroupPickerStyle())
-                .fixedSize()
             }
 
             PreferenceRow(localized("Shift + Enter Key:")) {

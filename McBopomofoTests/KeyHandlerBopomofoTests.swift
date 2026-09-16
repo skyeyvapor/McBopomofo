@@ -23,6 +23,7 @@
 
 import CandidateUI
 import XCTest
+import Testing
 
 @testable import McBopomofo
 
@@ -3187,5 +3188,132 @@ extension KeyHandlerBopomofoTests {
         if let committing = state as? InputState.Committing {
             XCTAssertEqual(committing.poppedText, "你好")
         }
+    }
+}
+
+@Suite("Shift letter input source switching", .serialized)
+struct ShiftLetterInputSourceTests {
+    @Test(arguments: [InputMode.bopomofo, .plainBopomofo])
+    func requestsSwitchWithoutCommittingLetter(mode: InputMode) {
+        let savedBehavior = Preferences.letterBehavior
+        defer { Preferences.letterBehavior = savedBehavior }
+        Preferences.letterBehavior = 2
+        let handler = KeyHandler()
+        handler.inputMode = mode
+        for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" {
+            let text = String(letter)
+            let input = KeyHandlerInput(
+                inputText: text, keyCode: 0, charCode: charCode(text), flags: .shift,
+                isVerticalMode: false)
+            var states: [InputState] = []
+            let handled = handler.handle(input: input, state: InputState.Empty()) {
+                states.append($0)
+            } errorCallback: { Issue.record("Unexpected input error") }
+            #expect(!handled)
+            #expect(states.count == 1)
+            #expect(states.first is InputState.SwitchingInputSourcePassthrough)
+        }
+    }
+
+    @Test(arguments: ["u", "u6"])
+    func preservesCompositionBeforeLetter(reading: String) {
+        let savedBehavior = Preferences.letterBehavior
+        let savedLayout = Preferences.keyboardLayout
+        defer {
+            Preferences.letterBehavior = savedBehavior
+            Preferences.keyboardLayout = savedLayout
+        }
+        Preferences.letterBehavior = 2
+        Preferences.keyboardLayout = .standard
+        LanguageModelManager.loadDataModels()
+        let handler = KeyHandler()
+        handler.inputMode = .bopomofo
+        var state: InputState = InputState.Empty()
+        for character in reading {
+            let key = String(character)
+            _ = handler.handle(input: KeyHandlerInput(
+                inputText: key, keyCode: 0, charCode: charCode(key), flags: [],
+                isVerticalMode: false), state: state) { state = $0 }
+                errorCallback: { Issue.record("Unexpected composition error") }
+        }
+        let composingText = (state as? InputState.NotEmpty)?.composingBuffer
+        #expect(composingText?.isEmpty == false)
+        var output = ""
+        let handled = handler.handle(input: KeyHandlerInput(
+            inputText: "A", keyCode: 0, charCode: charCode("A"), flags: .shift,
+            isVerticalMode: false), state: state) { next in
+                // Mirrors the controller's Empty transition, which commits pending text.
+                if next is InputState.Empty, let previous = state as? InputState.NotEmpty {
+                    output += previous.composingBuffer
+                }
+                if let committing = next as? InputState.Committing { output += committing.poppedText }
+                state = next
+            } errorCallback: { Issue.record("Unexpected input error") }
+        #expect(!handled)
+        #expect(output == (composingText ?? ""))
+        #expect(state is InputState.SwitchingInputSourcePassthrough)
+        #expect((handler.buildInputtingState() as? InputState.Inputting)?.composingBuffer == "")
+    }
+
+    @Test(arguments: [NSEvent.ModifierFlags.command, .control, .option, .function, .capsLock])
+    func modifiedShortcutsDoNotSwitch(modifier: NSEvent.ModifierFlags) {
+        let savedBehavior = Preferences.letterBehavior
+        defer { Preferences.letterBehavior = savedBehavior }
+        Preferences.letterBehavior = 2
+        let handler = KeyHandler()
+        var requestedSwitch = false
+        _ = handler.handle(input: KeyHandlerInput(
+            inputText: "A", keyCode: 0, charCode: charCode("A"), flags: [.shift, modifier],
+            isVerticalMode: false), state: InputState.Empty()) {
+                requestedSwitch = requestedSwitch || $0 is InputState.SwitchingInputSource
+            } errorCallback: {}
+        #expect(!requestedSwitch)
+    }
+}
+
+
+extension ShiftLetterInputSourceTests {
+    @Test(arguments: ["!", "a", "1"])
+    func nonUppercaseInputDoesNotSwitch(text: String) {
+        let saved = Preferences.letterBehavior
+        defer { Preferences.letterBehavior = saved }
+        Preferences.letterBehavior = 2
+        let handler = KeyHandler()
+        var switched = false
+        _ = handler.handle(input: KeyHandlerInput(
+            inputText: text, keyCode: 0, charCode: charCode(text), flags: .shift,
+            isVerticalMode: false), state: InputState.Empty()) {
+                switched = switched || $0 is InputState.SwitchingInputSource
+            } errorCallback: {}
+        #expect(!switched)
+    }
+
+
+}
+
+
+extension ShiftLetterInputSourceTests {
+    @Test
+    func candidateHandlingRetainsPriority() {
+        let saved = Preferences.letterBehavior
+        defer { Preferences.letterBehavior = saved }
+        Preferences.letterBehavior = 2
+        let handler = KeyHandler()
+        handler.inputMode = .bopomofo
+        let candidate = InputState.Candidate(
+            reading: "ㄧˊ", value: "移", displayText: "移", rawValue: "移")
+        let state = InputState.ChoosingCandidate(
+            composingBuffer: "移", cursorIndex: 1, candidates: [candidate],
+            useVerticalMode: false)
+        var switched = false
+        var committed = false
+        _ = handler.handle(input: KeyHandlerInput(
+            inputText: "A", keyCode: 0, charCode: charCode("A"), flags: .shift,
+            isVerticalMode: false), state: state) {
+                switched = switched || $0 is InputState.SwitchingInputSource
+                committed = committed || $0 is InputState.Committing
+            } errorCallback: {}
+        #expect(!switched)
+        #expect(!committed)
     }
 }

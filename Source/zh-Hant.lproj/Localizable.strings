@@ -81,6 +81,8 @@
 
 "Half-Width Punctuation Off" = "已經切回到全形標點模式";
 
+"Unable to switch input sources. Check the target in Preferences." = "無法切換輸入來源，請在偏好設定中確認切換目標。";
+
 "Associated Phrases" = "聯想詞";
 
 "Certain Unicode symbols or characters not supported as user phrases." = "您輸入了特殊符號，我們還無法支援在這種狀況下手動加詞。";
@@ -212,6 +214,9 @@
 "Shift + Letter Keys:" = "Shift + 字母鍵：";
 "Input uppercase letters directly" = "直接輸入大寫字母";
 "Input lowercased letters to buffer" = "在輸入緩衝區中輸入小寫字母";
+"Switch input source and input the letter" = "切換輸入方式並輸入該字母";
+"Switch to" = "切換至";
+"%@ (Unavailable)" = "%@（無法使用）";
 "ESC Key:" = "ESC 鍵：";
 "Beep upon input error" = "輸入錯誤時發出警示聲";
 "Trigger associated phrases" = "使用聯想詞功能";

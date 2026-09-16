@@ -138,6 +138,16 @@ final class PreferencesViewModel: NSObject, ObservableObject {
         return (defaultSizes + [currentSize]).sorted()
     }
 
+    @Published private(set) var shiftLetterInputSourceOptions: [KeyboardLayoutOption] = []
+
+    var shiftLetterInputSource: String {
+        get { Preferences.shiftLetterInputSource }
+        set {
+            objectWillChange.send()
+            Preferences.shiftLetterInputSource = newValue
+        }
+    }
+
     var letterBehavior: Int {
         get { Preferences.letterBehavior }
         set {
@@ -337,9 +347,10 @@ final class PreferencesViewModel: NSObject, ObservableObject {
         }
     }
 
-    private func loadBasisKeyboardLayoutOptions() {
+    func loadBasisKeyboardLayoutOptions() {
         let list = InputSourceHelper.allInstalledInputSources()
         var options: [KeyboardLayoutOption] = []
+        var switchOptions: [KeyboardLayoutOption] = []
 
         for source in list {
             func getString(_ key: CFString) -> String? {
@@ -368,8 +379,23 @@ final class PreferencesViewModel: NSObject, ObservableObject {
                 continue
             }
 
-            options.append(KeyboardLayoutOption(id: sourceID, localizedName: localizedName))
+            let option = KeyboardLayoutOption(id: sourceID, localizedName: localizedName)
+            options.append(option)
+            if InputSourceHelper.isEnabledASCIIKeyboardLayout(source) {
+                switchOptions.append(option)
+            }
         }
         basisKeyboardLayoutOptions = options
+
+        if !switchOptions.contains(where: { $0.id == shiftLetterInputSource }) {
+            let name = options.first(where: { $0.id == shiftLetterInputSource })?.localizedName ?? shiftLetterInputSource
+            switchOptions.append(
+                KeyboardLayoutOption(
+                    id: shiftLetterInputSource,
+                    localizedName: String(format: NSLocalizedString("%@ (Unavailable)", comment: ""), name)
+                )
+            )
+        }
+        shiftLetterInputSourceOptions = switchOptions
     }
 }

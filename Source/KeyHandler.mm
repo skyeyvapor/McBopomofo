@@ -804,6 +804,10 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
             if ([self _handlePunctuation:letter state:state usingVerticalMode:input.useVerticalMode stateCallback:stateCallback errorCallback:errorCallback]) {
                 return YES;
             }
+        } else if (Preferences.letterBehavior == 2) {
+            [self clear];
+            stateCallback([[InputStateSwitchingInputSource alloc] init]);
+            return NO;
         } else {
             if ([state isKindOfClass:[InputStateNotEmpty class]]) {
                 [self clear];

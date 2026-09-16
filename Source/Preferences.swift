@@ -50,6 +50,7 @@ private let kPhraseReplacementEnabledKey = "PhraseReplacementEnabled"
 private let kChineseConversionStyleKey = "ChineseConversionStyle"
 private let kAssociatedPhrasesEnabledKey = "AssociatedPhrasesEnabled"
 private let kLetterBehaviorKey = "LetterBehavior"
+private let kShiftLetterInputSourceKey = "ShiftLetterInputSource"
 private let kControlEnterOutputKey = "ControlEnterOutput"
 private let kShiftEnterEnabledKey = "ShiftEnterEnabled"
 private let kRepeatedPunctuationToSelectCandidateEnabledKey =
@@ -212,6 +213,8 @@ struct CandidateListTextSize {
 class Preferences: NSObject {
     static var allKeys: [String] {
         [
+            kLetterBehaviorKey,
+            kShiftLetterInputSourceKey,
             kKeyboardLayoutPreferenceKey,
             kBasisKeyboardLayoutPreferenceKey,
             kFunctionKeyKeyboardLayoutPreferenceKey,
@@ -256,6 +259,7 @@ class Preferences: NSObject {
         Preferences.phraseReplacementEnabled = Preferences.phraseReplacementEnabled
         Preferences.associatedPhrasesEnabled = Preferences.associatedPhrasesEnabled
         Preferences.letterBehavior = Preferences.letterBehavior
+        Preferences.shiftLetterInputSource = Preferences.shiftLetterInputSource
         Preferences.controlEnterOutput = Preferences.controlEnterOutput
         Preferences.shiftEnterEnabled = Preferences.shiftEnterEnabled
         Preferences.repeatedPunctuationToSelectCandidateEnabled =
@@ -483,8 +487,12 @@ extension Preferences {
     ///
     /// - 0: Output upper-cased letters directly.
     /// - 1: Output lower-cased letters in the composing buffer.
+    /// - 2: Output an upper-cased letter and switch to the selected input source.
     @UserDefault(key: kLetterBehaviorKey, defaultValue: 0)
     @objc static var letterBehavior: Int
+
+    @UserDefault(key: kShiftLetterInputSourceKey, defaultValue: "com.apple.keylayout.ABC")
+    static var shiftLetterInputSource: String
 
     /// The behavior of pressing Ctrl + Enter.
     ///

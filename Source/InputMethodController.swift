@@ -24,6 +24,7 @@
 import CandidateUI
 import Cocoa
 import InputMethodKit
+import InputSourceHelper
 import NotifierUI
 import OpenCCBridge
 import SystemCharacterInfo
@@ -189,11 +190,12 @@ class McBopomofoInputMethodController: IMKInputController {
     override func setValue(_ value: Any!, forTag tag: Int, client: Any!) {
         let newInputMode = InputMode(rawValue: value as? String ?? InputMode.bopomofo.rawValue)
         LanguageModelManager.loadDataModel(newInputMode)
+        // Restore the client layout even when the internal input mode is unchanged.
+        (client as? IMKTextInput)?.overrideKeyboard(
+            withKeyboardNamed: Preferences.basisKeyboardLayout)
         if keyHandler.inputMode != newInputMode {
             UserDefaults.standard.synchronize()
             // Remember to override the keyboard layout again -- treat this as an activate event.
-            (client as? IMKTextInput)?.overrideKeyboard(
-                withKeyboardNamed: Preferences.basisKeyboardLayout)
             keyHandler.clear()
             keyHandler.inputMode = newInputMode
             self.handle(state: .Empty(), client: client)
@@ -398,6 +400,10 @@ extension McBopomofoInputMethodController {
         case let newState as InputState.Deactivated:
             handle(state: newState, previous: previous, client: client)
             state = .Empty()
+        case let newState as InputState.SwitchingInputSource:
+            handle(state: newState as InputState.Empty, previous: previous, client: client)
+            state = .Empty()
+            InputSourceSwitcher.switchTo(Preferences.shiftLetterInputSource)
         case let newState as InputState.Empty:
             handle(state: newState, previous: previous, client: client)
         case let newState as InputState.EmptyIgnoringPreviousState:

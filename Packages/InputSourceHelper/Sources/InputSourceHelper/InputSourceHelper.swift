@@ -1,4 +1,4 @@
-// Copyright (c) 2022 and onwards The McBopomofo Authors.
+// Copyright (c) 2026 and onwards The McBopomofo Authors.
 //
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -56,6 +56,26 @@ public class InputSourceHelper: NSObject {
     @objc(inputSourceForInputSourceID:)
     public static func inputSource(for sourceID: String) -> TISInputSource? {
         inputSource(for: kTISPropertyInputSourceID, stringValue: sourceID)
+    }
+
+    public static func isEnabledASCIIKeyboardLayout(_ source: TISInputSource) -> Bool {
+        guard inputSourceEnabled(for: source),
+              let type = TISGetInputSourceProperty(source, kTISPropertyInputSourceType),
+              let ascii = TISGetInputSourceProperty(source, kTISPropertyInputSourceIsASCIICapable),
+              let selectable = TISGetInputSourceProperty(source, kTISPropertyInputSourceIsSelectCapable) else {
+            return false
+        }
+        return Unmanaged<CFString>.fromOpaque(type).takeUnretainedValue() == kTISTypeKeyboardLayout
+        && Unmanaged<CFBoolean>.fromOpaque(ascii).takeUnretainedValue() == kCFBooleanTrue
+        && Unmanaged<CFBoolean>.fromOpaque(selectable).takeUnretainedValue() == kCFBooleanTrue
+    }
+
+    public static func selectInputSource(withID sourceID: String) -> Bool {
+        guard let source = inputSource(for: sourceID) else {
+            return false
+        }
+        let status = TISSelectInputSource(source)
+        return status == noErr
     }
 
     @objc(inputSourceEnabled:)
@@ -128,4 +148,3 @@ public class InputSourceHelper: NSObject {
     }
 
 }
-
