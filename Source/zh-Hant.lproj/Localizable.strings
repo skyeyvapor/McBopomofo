@@ -234,7 +234,7 @@
 "Ctrl + ` Key:" = "Ctrl + ` 按鍵：";
 "Ctrl + `  Key:" = "Ctrl + ` 按鍵：";
 "Command Key:" = "Command 鍵：";
-"When pressed, switch input source to" = "按下時切換輸入方式至";
+"Switch input source when pressed" = "按下時切換輸入方式";
 "Input Big 5 Code" = "使用 Ctrl + ` 輸入 Big5 內碼";
 "Punctuation Symbols:" = "標點符號：";
 "Repeated key to next candidate" = "連續輸入標點切換候選字";

@@ -668,17 +668,23 @@ private struct AdvancedPreferencesView: View {
             }
 
             PreferenceRow(localized("Command Key:")) {
-                HStack {
-                    Toggle(localized("When pressed, switch input source to"),
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle(localized("Switch input source when pressed"),
                            isOn: $preferences.commandInputSourceEnabled)
-                    Picker("", selection: $preferences.commandInputSource) {
-                        ForEach(preferences.commandInputSourceOptions) { source in
-                            Text(source.localizedName).tag(source.id)
+                    if preferences.commandInputSourceEnabled {
+                        HStack {
+                            Text(localized("Switch to"))
+                                .fixedSize()
+                            Picker("", selection: $preferences.commandInputSource) {
+                                ForEach(preferences.commandInputSourceOptions) { source in
+                                    Text(source.localizedName).tag(source.id)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            .fixedSize()
                         }
                     }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    .disabled(!preferences.commandInputSourceEnabled)
                 }
             }
 
