@@ -411,7 +411,12 @@ extension McBopomofoInputMethodController {
         case let newState as InputState.SwitchingInputSource:
             handle(state: newState as InputState.Empty, previous: previous, client: client)
             state = .Empty()
-            InputSourceSwitcher.switchTo(newState.sourceID)
+            if !InputSourceHelper.selectInputSource(withID: newState.sourceID) {
+                NotifierController.notify(
+                    message: NSLocalizedString(
+                        "Unable to switch input sources. Check the target in Preferences.", comment: "")
+                )
+            }
         case let newState as InputState.Empty:
             handle(state: newState, previous: previous, client: client)
         case let newState as InputState.EmptyIgnoringPreviousState:
