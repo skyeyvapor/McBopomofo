@@ -541,6 +541,82 @@ class KeyHandlerBopomofoTests: XCTestCase {
         }
     }
 
+    func testUppercaseLetterWhenEmpty3() {
+        let current = Preferences.letterBehavior
+        let target = Preferences.shiftLetterInputSource
+        defer {
+            Preferences.letterBehavior = current
+            Preferences.shiftLetterInputSource = target
+        }
+        Preferences.letterBehavior = 2
+        Preferences.shiftLetterInputSource = "com.apple.keylayout.Vietnamese"
+        var states: [InputState] = []
+        let result = handler.handle(input: KeyHandlerInput(
+            inputText: "A", keyCode: 0, charCode: charCode("A"), flags: .shift,
+            isVerticalMode: false), state: InputState.Empty()) {
+                states.append($0)
+            } errorCallback: { XCTFail("Unexpected input error") }
+
+        XCTAssertFalse(result)
+        XCTAssertEqual(states.count, 1)
+        XCTAssertEqual((states.first as? InputState.SwitchingInputSource)?.sourceID,
+                       "com.apple.keylayout.Vietnamese")
+    }
+
+    func testUppercaseLetterWhenNotEmpty3() {
+        let current = Preferences.letterBehavior
+        defer { Preferences.letterBehavior = current }
+        Preferences.letterBehavior = 2
+        var state: InputState = InputState.Empty()
+        for key in ["u", "6"] {
+            _ = handler.handle(input: KeyHandlerInput(
+                inputText: key, keyCode: 0, charCode: charCode(key), flags: [],
+                isVerticalMode: false), state: state) { state = $0 }
+                errorCallback: { XCTFail("Unexpected composition error") }
+        }
+        XCTAssertTrue(state is InputState.Inputting)
+        XCTAssertFalse((state as? InputState.Inputting)?.composingBuffer.isEmpty ?? true)
+
+        var states: [InputState] = []
+        let result = handler.handle(input: KeyHandlerInput(
+            inputText: "A", keyCode: 0, charCode: charCode("A"), flags: .shift,
+            isVerticalMode: false), state: state) { states.append($0) }
+            errorCallback: { XCTFail("Unexpected input error") }
+
+        XCTAssertFalse(result)
+        XCTAssertEqual(states.count, 1)
+        XCTAssertTrue(states.first is InputState.SwitchingInputSource)
+        XCTAssertEqual((handler.buildInputtingState() as? InputState.Inputting)?.composingBuffer, "")
+    }
+
+    // Deleting the final reading leaves EmptyIgnoringPreviousState, not Empty.
+    func testUppercaseLetterAfterDeletingComposition() {
+        let current = Preferences.letterBehavior
+        defer { Preferences.letterBehavior = current }
+        Preferences.letterBehavior = 2
+        var state: InputState = InputState.Empty()
+        _ = handler.handle(input: KeyHandlerInput(
+            inputText: "u", keyCode: 32, charCode: charCode("u"), flags: [],
+            isVerticalMode: false), state: state) { state = $0 }
+            errorCallback: { XCTFail("Unexpected composition error") }
+        XCTAssertTrue(state is InputState.Inputting)
+
+        _ = handler.handle(input: KeyHandlerInput(
+            inputText: "\u{8}", keyCode: 51, charCode: 8, flags: [],
+            isVerticalMode: false), state: state) { state = $0 }
+            errorCallback: { XCTFail("Unexpected deletion error") }
+        XCTAssertTrue(state is InputState.EmptyIgnoringPreviousState)
+
+        var states: [InputState] = []
+        let result = handler.handle(input: KeyHandlerInput(
+            inputText: "A", keyCode: 0, charCode: charCode("A"), flags: .shift,
+            isVerticalMode: false), state: state) { states.append($0) }
+            errorCallback: { XCTFail("Unexpected input error") }
+        XCTAssertFalse(result)
+        XCTAssertEqual(states.count, 1)
+        XCTAssertTrue(states.first is InputState.SwitchingInputSource)
+    }
+
     func testPunctuationTable() {
         let enabled = Preferences.halfWidthPunctuationEnabled
         Preferences.halfWidthPunctuationEnabled = false
