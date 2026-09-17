@@ -23,7 +23,6 @@
 
 import CandidateUI
 import XCTest
-import Testing
 
 @testable import McBopomofo
 
