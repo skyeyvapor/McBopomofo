@@ -61,13 +61,13 @@ public class InputSourceHelper: NSObject {
     public static func isEnabledASCIIKeyboardLayout(_ source: TISInputSource) -> Bool {
         guard inputSourceEnabled(for: source),
               let type = TISGetInputSourceProperty(source, kTISPropertyInputSourceType),
-              let ascii = TISGetInputSourceProperty(source, kTISPropertyInputSourceIsASCIICapable),
-              let selectable = TISGetInputSourceProperty(source, kTISPropertyInputSourceIsSelectCapable) else {
+              let isASCIICapable = TISGetInputSourceProperty(source, kTISPropertyInputSourceIsASCIICapable),
+              let isSelectCapable = TISGetInputSourceProperty(source, kTISPropertyInputSourceIsSelectCapable) else {
             return false
         }
         return Unmanaged<CFString>.fromOpaque(type).takeUnretainedValue() == kTISTypeKeyboardLayout
-        && Unmanaged<CFBoolean>.fromOpaque(ascii).takeUnretainedValue() == kCFBooleanTrue
-        && Unmanaged<CFBoolean>.fromOpaque(selectable).takeUnretainedValue() == kCFBooleanTrue
+        && Unmanaged<CFBoolean>.fromOpaque(isASCIICapable).takeUnretainedValue() == kCFBooleanTrue
+        && Unmanaged<CFBoolean>.fromOpaque(isSelectCapable).takeUnretainedValue() == kCFBooleanTrue
     }
 
     public static func selectInputSource(withID sourceID: String) -> Bool {
