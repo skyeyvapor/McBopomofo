@@ -502,7 +502,7 @@ private struct BasicPreferencesView: View {
                     Picker("", selection: $preferences.letterBehavior) {
                         Text(localized("Input uppercase letters directly")).tag(0)
                         Text(localized("Input lowercased letters to buffer")).tag(1)
-                        Text(localized("Switch input source and input the letter")).tag(2)
+                        Text(localized("Switch input source and input")).tag(2)
                     }
                     .labelsHidden()
                     .pickerStyle(RadioGroupPickerStyle())
@@ -512,7 +512,6 @@ private struct BasicPreferencesView: View {
                         HStack {
                             Text(localized("Switch to"))
                                 .fixedSize()
-
                             Picker("", selection: $preferences.shiftLetterInputSource) {
                                 ForEach(preferences.shiftLetterInputSourceOptions) { source in
                                     Text(source.localizedName).tag(source.id)

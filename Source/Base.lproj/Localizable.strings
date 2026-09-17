@@ -214,7 +214,7 @@
 "Shift + Letter Keys:" = "Shift + Letter Keys:";
 "Input uppercase letters directly" = "Input uppercase letters directly";
 "Input lowercased letters to buffer" = "Input lowercased letters to buffer";
-"Switch input source and input the letter" = "Switch input source and input the letter";
+"Switch input source and input" = "Switch input source and input";
 "Switch to" = "Switch to";
 "%@ (Unavailable)" = "%@ (Unavailable)";
 "ESC Key:" = "ESC Key:";
