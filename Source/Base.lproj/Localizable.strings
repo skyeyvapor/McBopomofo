@@ -212,9 +212,9 @@
 "Candidate Text Size:" = "Candidate Text Size:";
 "Move cursor after selection" = "Move cursor after selection";
 "Shift + Letter Keys:" = "Shift + Letter Keys:";
-"Input uppercase letters directly" = "Input uppercase letters directly";
+"Output uppercase letters directly" = "Output uppercase letters directly";
 "Input lowercased letters to buffer" = "Input lowercased letters to buffer";
-"Switch input source and input" = "Switch input source and input";
+"Switch input source and output" = "Switch input source and output";
 "Switch to" = "Switch to";
 "%@ (Unavailable)" = "%@ (Unavailable)";
 "ESC Key:" = "ESC Key:";

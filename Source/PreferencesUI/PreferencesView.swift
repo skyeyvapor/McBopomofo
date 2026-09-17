@@ -500,9 +500,9 @@ private struct BasicPreferencesView: View {
             PreferenceRow(localized("Shift + Letter Keys:")) {
                 VStack(alignment: .leading, spacing: 8) {
                     Picker("", selection: $preferences.letterBehavior) {
-                        Text(localized("Input uppercase letters directly")).tag(0)
+                        Text(localized("Output uppercase letters directly")).tag(0)
                         Text(localized("Input lowercased letters to buffer")).tag(1)
-                        Text(localized("Switch input source and input")).tag(2)
+                        Text(localized("Switch input source and output")).tag(2)
                     }
                     .labelsHidden()
                     .pickerStyle(RadioGroupPickerStyle())

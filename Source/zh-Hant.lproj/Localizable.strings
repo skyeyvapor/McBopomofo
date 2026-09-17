@@ -212,9 +212,9 @@
 "Candidate Text Size:" = "選字窗文字大小：";
 "Move cursor after selection" = "選字之後自動移動游標位置";
 "Shift + Letter Keys:" = "Shift + 字母鍵：";
-"Input uppercase letters directly" = "直接輸入大寫字母";
+"Output uppercase letters directly" = "直接輸出大寫字母";
 "Input lowercased letters to buffer" = "在輸入緩衝區中輸入小寫字母";
-"Switch input source and input" = "切換輸入方式並輸入";
+"Switch input source and output" = "切換輸入方式並輸出";
 "Switch to" = "切換至";
 "%@ (Unavailable)" = "%@（無法使用）";
 "ESC Key:" = "ESC 鍵：";

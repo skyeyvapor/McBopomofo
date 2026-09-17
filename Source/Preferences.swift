@@ -493,7 +493,7 @@ extension Preferences {
     ///
     /// - 0: Output upper-cased letters directly.
     /// - 1: Output lower-cased letters in the composing buffer.
-    /// - 2: Output an upper-cased letter and switch to the selected input source.
+    /// - 2: Switch to the selected input source and output.
     @UserDefault(key: kLetterBehaviorKey, defaultValue: 0)
     @objc static var letterBehavior: Int
 
